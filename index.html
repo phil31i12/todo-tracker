@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>TaskBoard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a22;
+      --surface2: #24242e;
+      --border: rgba(255,255,255,0.07);
+      --accent: #6c63ff;
+      --accent2: #a78bfa;
+      --green: #22c55e;
+      --red: #ef4444;
+      --text: #f0f0f5;
+      --muted: #8888a0;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overscroll-behavior: none;
+    }
+
+    /* ── SETUP SCREEN ── */
+    #setup-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 24px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(108,99,255,0.18) 0%, transparent 70%);
+    }
+
+    #setup-screen .logo {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    #setup-screen p.tagline {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    #setup-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    #setup-card h2 {
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+    }
+
+    #setup-card .hint {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    #setup-card .hint a {
+      color: var(--accent2);
+      text-decoration: none;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-family: 'Inter', monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.98); }
+
+    /* ── MAIN APP ── */
+    #app {
+      display: none;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 24px 16px 100px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      padding-top: 8px;
+    }
+
+    .app-header .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sync-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    .sync-dot.offline { background: var(--red); animation: none; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* ── ADD FORM ── */
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .add-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .add-input:focus { border-color: var(--accent); }
+    .add-input::placeholder { color: var(--muted); }
+
+    .add-btn {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      color: #fff;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 1.3rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      line-height: 1;
+    }
+
+    .add-btn:hover { opacity: 0.9; }
+    .add-btn:active { transform: scale(0.95); }
+
+    .add-meta {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .add-meta select, .add-meta input {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      flex: 1;
+    }
+
+    .add-meta select option { background: var(--surface2); }
+
+    /* ── FILTERS ── */
+    .filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .filters::-webkit-scrollbar { display: none; }
+
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 16px;
+      border-radius: 99px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── TODO LIST ── */
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 10px;
+      margin-top: 20px;
+    }
+
+    .todo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .todo-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      transition: all 0.25s ease;
+      animation: slideIn 0.25s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .todo-item.done {
+      opacity: 0.55;
+    }
+
+    .todo-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      background: transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      margin-top: 1px;
+    }
+
+    .todo-checkbox:hover { border-color: var(--accent); }
+
+    .todo-checkbox.checked {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .todo-checkbox.checked::after {
+      content: '';
+      display: block;
+      width: 6px;
+      height: 10px;
+      border: 2px solid #fff;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg) translateY(-1px);
+    }
+
+    .todo-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .todo-title {
+      font-size: 0.95rem;
+      font-weight: 500;
+      line-height: 1.4;
+      transition: all 0.3s;
+      word-break: break-word;
+    }
+
+    .todo-item.done .todo-title {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    .todo-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 5px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tag-high { background: rgba(239,68,68,0.15); color: #f87171; }
+    .tag-medium { background: rgba(251,146,60,0.15); color: #fb923c; }
+    .tag-low { background: rgba(34,197,94,0.15); color: #4ade80; }
+
+    .assigned-chip {
+      font-size: 0.72rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .assigned-chip::before {
+      content: '';
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      flex-shrink: 0;
+    }
+
+    .todo-date {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .todo-delete {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 6px;
+      font-size: 1rem;
+      line-height: 1;
+      opacity: 0;
+      transition: opacity 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .todo-item:hover .todo-delete { opacity: 1; }
+    .todo-delete:hover { color: var(--red); }
+
+    /* mobile: always show delete */
+    @media (max-width: 600px) {
+      .todo-delete { opacity: 0.4; }
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+
+    .empty-state .emoji { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── SETTINGS MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal h3 { margin-bottom: 16px; font-size: 1rem; }
+
+    .modal-close {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-ghost {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .settings-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s;
+    }
+
+    .settings-btn:hover { border-color: var(--accent); color: var(--text); }
+
+    /* ── COMPLETION COUNT ── */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .stat-chip span {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* ── PROGRESS BAR ── */
+    .progress-bar-wrap {
+      background: var(--surface2);
+      height: 4px;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── SETUP SCREEN ── -->
+<div id="setup-screen">
+  <div class="logo">TaskBoard</div>
+  <p class="tagline">Geteiltes Todo-Board für dich & deinen Partner</p>
+
+  <div id="setup-card">
+    <h2>Firebase konfigurieren</h2>
+    <p class="hint">
+      Du benötigst ein kostenloses Firebase-Projekt.<br>
+      <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> →
+      Neues Projekt → Realtime Database aktivieren → Projekteinstellungen → Web-App → Config kopieren.
+    </p>
+
+    <div class="field">
+      <label>API Key</label>
+      <input type="text" id="cfg-apiKey" placeholder="AIzaSy..." />
+    </div>
+    <div class="field">
+      <label>Database URL</label>
+      <input type="text" id="cfg-dbUrl" placeholder="https://xxx-default-rtdb.firebaseio.com" />
+    </div>
+    <div class="field">
+      <label>Project ID</label>
+      <input type="text" id="cfg-projectId" placeholder="mein-projekt-abc" />
+    </div>
+    <div class="field">
+      <label>Dein Name (z.B. "Philipp")</label>
+      <input type="text" id="cfg-name" placeholder="Philipp" />
+    </div>
+
+    <button class="btn-primary" onclick="saveConfig()">Verbinden &amp; loslegen →</button>
+  </div>
+</div>
+
+<!-- ── MAIN APP ── -->
+<div id="app">
+  <div class="app-header">
+    <div class="logo">TaskBoard</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="sync-indicator">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-label">Sync</span>
+      </div>
+      <button class="settings-btn" onclick="openSettings()">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Add form -->
+  <div class="add-form">
+    <div class="add-row">
+      <input class="add-input" id="todo-input" type="text" placeholder="Neue Aufgabe hinzufügen…" onkeydown="if(event.key==='Enter')addTodo()" />
+      <button class="add-btn" onclick="addTodo()">+</button>
+    </div>
+    <div class="add-meta">
+      <select id="todo-priority">
+        <option value="medium">🟡 Mittel</option>
+        <option value="high">🔴 Hoch</option>
+        <option value="low">🟢 Niedrig</option>
+      </select>
+      <input type="text" id="todo-assignee" placeholder="Zugewiesen an…" />
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-chip">Offen: <span id="count-open">0</span></div>
+    <div class="stat-chip">Erledigt: <span id="count-done">0</span></div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('all',this)">Alle</button>
+    <button class="filter-btn" onclick="setFilter('open',this)">Offen</button>
+    <button class="filter-btn" onclick="setFilter('done',this)">Erledigt</button>
+    <button class="filter-btn" onclick="setFilter('high',this)">🔴 Hoch</button>
+  </div>
+
+  <!-- List -->
+  <div id="todo-list" class="todo-list"></div>
+</div>
+
+<!-- ── SETTINGS MODAL ── -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <h3>Einstellungen</h3>
+    <div class="field">
+      <label>Dein Name</label>
+      <input class="add-input" type="text" id="settings-name" style="width:100%" />
+    </div>
+    <div class="modal-close">
+      <button class="btn-ghost" onclick="closeSettings()">Schließen</button>
+      <button class="btn-primary" style="width:auto;padding:10px 24px" onclick="saveName()">Speichern</button>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn-ghost" style="color:var(--red);border-color:rgba(239,68,68,0.3);width:100%" onclick="resetConfig()">
+        Firebase-Konfiguration zurücksetzen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+  import { getDatabase, ref, push, onValue, remove, update }
+    from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+  let db, todosRef;
+  let currentFilter = 'all';
+  let allTodos = {};
+
+  // ── Config helpers ──
+  function getConfig() {
+    try { return JSON.parse(localStorage.getItem('tb_config') || 'null'); }
+    catch { return null; }
+  }
+
+  function getName() {
+    return localStorage.getItem('tb_name') || 'Unbekannt';
+  }
+
+  // ── Boot ──
+  const cfg = getConfig();
+  if (cfg) {
+    initApp(cfg);
+  }
+
+  window.saveConfig = function() {
+    const apiKey = document.getElementById('cfg-apiKey').value.trim();
+    const dbUrl  = document.getElementById('cfg-dbUrl').value.trim();
+    const projId = document.getElementById('cfg-projectId').value.trim();
+    const name   = document.getElementById('cfg-name').value.trim();
+
+    if (!apiKey || !dbUrl || !projId) {
+      alert('Bitte alle Felder ausfüllen!'); return;
+    }
+
+    const config = { apiKey, databaseURL: dbUrl, projectId: projId };
+    localStorage.setItem('tb_config', JSON.stringify(config));
+    localStorage.setItem('tb_name', name || 'User');
+    initApp(config);
+  };
+
+  function initApp(config) {
+    const app = initializeApp(config);
+    db = getDatabase(app);
+    todosRef = ref(db, 'todos');
+
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    // Real-time listener
+    onValue(todosRef, (snapshot) => {
+      allTodos = snapshot.val() || {};
+      renderTodos();
+      setSynced(true);
+    }, () => setSynced(false));
+
+    document.getElementById('settings-name').value = getName();
+  }
+
+  function setSynced(ok) {
+    const dot = document.getElementById('sync-dot');
+    const lbl = document.getElementById('sync-label');
+    dot.className = 'sync-dot' + (ok ? '' : ' offline');
+    lbl.textContent = ok ? 'Live' : 'Offline';
+  }
+
+  // ── Add ──
+  window.addTodo = function() {
+    const input = document.getElementById('todo-input');
+    const title = input.value.trim();
+    if (!title) return;
+
+    push(todosRef, {
+      title,
+      done: false,
+      priority: document.getElementById('todo-priority').value,
+      assignee: document.getElementById('todo-assignee').value.trim() || null,
+      createdBy: getName(),
+      createdAt: Date.now()
+    });
+
+    input.value = '';
+    document.getElementById('todo-assignee').value = '';
+    input.focus();
+  };
+
+  // ── Toggle ──
+  window.toggleTodo = function(id, current) {
+    update(ref(db, 'todos/' + id), { done: !current });
+  };
+
+  // ── Delete ──
+  window.deleteTodo = function(id) {
+    remove(ref(db, 'todos/' + id));
+  };
+
+  // ── Filter ──
+  window.setFilter = function(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTodos();
+  };
+
+  // ── Render ──
+  function renderTodos() {
+    const list = document.getElementById('todo-list');
+    const entries = Object.entries(allTodos)
+      .sort((a, b) => {
+        // undone first, then by date desc
+        if (a[1].done !== b[1].done) return a[1].done ? 1 : -1;
+        return (b[1].createdAt || 0) - (a[1].createdAt || 0);
+      });
+
+    const filtered = entries.filter(([, t]) => {
+      if (currentFilter === 'open') return !t.done;
+      if (currentFilter === 'done') return t.done;
+      if (currentFilter === 'high') return t.priority === 'high';
+      return true;
+    });
+
+    const total = entries.length;
+    const done  = entries.filter(([, t]) => t.done).length;
+    const open  = total - done;
+
+    document.getElementById('count-open').textContent = open;
+    document.getElementById('count-done').textContent = done;
+    document.getElementById('progress-bar').style.width =
+      total ? Math.round(done / total * 100) + '%' : '0%';
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="emoji">✅</div>
+        <p>${currentFilter === 'done' ? 'Noch nichts erledigt.' : 'Keine Aufgaben hier!'}</p>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(([id, t]) => {
+      const pTag = { high: `<span class="tag tag-high">Hoch</span>`,
+                     medium: `<span class="tag tag-medium">Mittel</span>`,
+                     low: `<span class="tag tag-low">Niedrig</span>` }[t.priority] || '';
+      const assignee = t.assignee
+        ? `<span class="assigned-chip">${esc(t.assignee)}</span>` : '';
+      const date = t.createdAt
+        ? `<span class="todo-date">${new Date(t.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})}</span>` : '';
+      const by = t.createdBy ? `<span style="font-size:0.7rem;color:var(--muted)">von ${esc(t.createdBy)}</span>` : '';
+
+      return `<div class="todo-item${t.done ? ' done' : ''}">
+        <div class="todo-checkbox${t.done ? ' checked' : ''}" onclick="toggleTodo('${id}', ${t.done})"></div>
+        <div class="todo-body">
+          <div class="todo-title">${esc(t.title)}</div>
+          <div class="todo-meta-row">${pTag}${assignee}${by}${date}</div>
+        </div>
+        <button class="todo-delete" onclick="deleteTodo('${id}')" title="Löschen">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Settings ──
+  window.openSettings = function() {
+    document.getElementById('settings-name').value = getName();
+    document.getElementById('settings-modal').classList.add('open');
+  };
+
+  window.closeSettings = function() {
+    document.getElementById('settings-modal').classList.remove('open');
+  };
+
+  window.saveName = function() {
+    const n = document.getElementById('settings-name').value.trim();
+    if (n) localStorage.setItem('tb_name', n);
+    closeSettings();
+  };
+
+  window.resetConfig = function() {
+    if (confirm('Firebase-Konfiguration wirklich zurücksetzen?')) {
+      localStorage.removeItem('tb_config');
+      localStorage.removeItem('tb_name');
+      location.reload();
+    }
+  };
+
+  // Close modal on overlay click
+  document.getElementById('settings-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeSettings();
+  });
+</script>
+</body>
+</html>
