@@ -586,8 +586,6 @@
   let currentFilter = 'all';
   let allTodos = {};
 
-  const PW_HASH = '8a1a25a6b28cba08ab9dfdc6cd226ee3ebf9ce7d01f2562f13e7a4c9e1ba5f04'; // Golf2026
-
   async function sha256(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -606,7 +604,14 @@
   window.checkPw = async function() {
     const val  = document.getElementById('pw-input').value;
     const hash = await sha256(val);
-    if (hash === PW_HASH) {
+
+    // Hash lives in Firebase, not in source code
+    const res  = await fetch(
+      'https://todo-tracker-b6ed5-default-rtdb.europe-west1.firebasedatabase.app/_config/pwHash.json'
+    );
+    const stored = await res.json();
+
+    if (hash === stored) {
       localStorage.setItem('tb_auth', '1');
       document.getElementById('pw-screen').style.display = 'none';
       afterAuth();
