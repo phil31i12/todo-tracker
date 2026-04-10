@@ -605,11 +605,13 @@
     const val  = document.getElementById('pw-input').value;
     const hash = await sha256(val);
 
-    // Hash lives in Firebase, not in source code
-    const res  = await fetch(
-      'https://todo-tracker-b6ed5-default-rtdb.europe-west1.firebasedatabase.app/_config/pwHash.json'
-    );
-    const stored = await res.json();
+    let stored = null;
+    try {
+      const res = await fetch(
+        'https://todo-tracker-b6ed5-default-rtdb.europe-west1.firebasedatabase.app/_config/pwHash.json'
+      );
+      stored = await res.json();
+    } catch(e) { /* offline fallback */ }
 
     if (hash === stored) {
       localStorage.setItem('tb_auth', '1');
