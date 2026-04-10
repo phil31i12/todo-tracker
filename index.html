@@ -365,23 +365,91 @@
 
     .todo-date { font-size: 0.7rem; color: var(--muted); margin-left: auto; }
 
-    .todo-delete {
+    .todo-actions {
+      display: flex;
+      gap: 2px;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .todo-item:hover .todo-actions { opacity: 1; }
+
+    .todo-delete, .todo-edit {
       background: none;
       border: none;
       color: var(--muted);
       cursor: pointer;
-      padding: 2px 4px;
+      padding: 4px 6px;
       border-radius: 6px;
-      font-size: 1rem;
+      font-size: 0.9rem;
       line-height: 1;
-      opacity: 0;
-      transition: opacity 0.2s, color 0.2s;
-      flex-shrink: 0;
+      transition: color 0.2s, background 0.2s;
     }
-    .todo-item:hover .todo-delete { opacity: 1; }
-    .todo-delete:hover { color: var(--red); }
+    .todo-edit:hover  { color: var(--accent); background: rgba(91,91,214,0.08); }
+    .todo-delete:hover { color: var(--red);    background: rgba(220,38,38,0.08); }
 
-    @media (max-width: 600px) { .todo-delete { opacity: 0.4; } }
+    @media (max-width: 600px) { .todo-actions { opacity: 0.4; } }
+
+    /* inline edit */
+    .todo-edit-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .todo-edit-input {
+      flex: 1;
+      min-width: 0;
+      background: var(--surface2);
+      border: 1px solid var(--accent);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+    }
+    .todo-edit-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+    }
+    .todo-edit-assignee {
+      flex: 1;
+      min-width: 80px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+    }
+    .todo-save-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .todo-cancel-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
 
     /* ── PERSON FILTERS ── */
     .person-filters {
@@ -750,6 +818,23 @@
   window.toggleTodo  = (id, cur) => update(ref(db, 'todos/' + id), { done: !cur });
   window.deleteTodo  = (id)      => remove(ref(db, 'todos/' + id));
 
+  window.startEdit = function(id) {
+    document.getElementById('edit-row-' + id).style.display = 'flex';
+    document.getElementById('edit-title-' + id).focus();
+  };
+
+  window.cancelEdit = function(id) {
+    document.getElementById('edit-row-' + id).style.display = 'none';
+  };
+
+  window.saveTodo = function(id) {
+    const title    = document.getElementById('edit-title-' + id).value.trim();
+    const priority = document.getElementById('edit-prio-' + id).value;
+    const assignee = document.getElementById('edit-assign-' + id).value.trim() || null;
+    if (!title) return;
+    update(ref(db, 'todos/' + id), { title, priority, assignee });
+  };
+
   window.setFilter = function(f, btn) {
     currentFilter = f;
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -822,13 +907,27 @@
       const date = t.createdAt
         ? `<span class="todo-date">${new Date(t.createdAt).toLocaleDateString('de-DE',{day:'2-digit',month:'short'})}</span>` : '';
 
-      return `<div class="todo-item${t.done ? ' done' : ''}">
+      return `<div class="todo-item${t.done ? ' done' : ''}" id="item-${id}">
         <div class="todo-checkbox${t.done ? ' checked' : ''}" onclick="toggleTodo('${id}',${t.done})"></div>
         <div class="todo-body">
           <div class="todo-title">${esc(t.title)}</div>
           <div class="todo-meta-row">${pTag}${assignee}${by}${date}</div>
+          <div class="todo-edit-row" id="edit-row-${id}" style="display:none">
+            <input class="todo-edit-input" id="edit-title-${id}" value="${esc(t.title)}" onkeydown="if(event.key==='Enter')saveTodo('${id}');if(event.key==='Escape')cancelEdit('${id}')" />
+            <select class="todo-edit-select" id="edit-prio-${id}">
+              <option value="medium"${t.priority==='medium'?' selected':''}>🟡 Mittel</option>
+              <option value="high"${t.priority==='high'?' selected':''}>🔴 Hoch</option>
+              <option value="low"${t.priority==='low'?' selected':''}>🟢 Niedrig</option>
+            </select>
+            <input class="todo-edit-assignee" id="edit-assign-${id}" value="${esc(t.assignee||'')}" placeholder="Zugewiesen an…" />
+            <button class="todo-save-btn" onclick="saveTodo('${id}')">✓</button>
+            <button class="todo-cancel-btn" onclick="cancelEdit('${id}')">✕</button>
+          </div>
         </div>
-        <button class="todo-delete" onclick="deleteTodo('${id}')" title="Löschen">✕</button>
+        <div class="todo-actions">
+          <button class="todo-edit" onclick="startEdit('${id}')" title="Bearbeiten">✏️</button>
+          <button class="todo-delete" onclick="deleteTodo('${id}')" title="Löschen">🗑</button>
+        </div>
       </div>`;
     }).join('');
   }
