@@ -31,6 +31,29 @@
       overscroll-behavior: none;
     }
 
+    /* ── PASSWORD / NAME SCREEN shared layout ── */
+    #pw-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 24px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(108,99,255,0.18) 0%, transparent 70%);
+    }
+
+    #pw-screen .logo {
+      font-size: 2.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    #pw-screen p.tagline { color: var(--muted); font-size: 0.95rem; margin-bottom: 40px; }
+
     /* ── NAME SCREEN ── */
     #name-screen {
       display: flex;
@@ -449,6 +472,22 @@
 </head>
 <body>
 
+<!-- ── PASSWORD SCREEN ── -->
+<div id="pw-screen" style="display:none">
+  <div class="logo">TaskBoard</div>
+  <p class="tagline">Privates Board</p>
+  <div id="name-card">
+    <h2>Passwort eingeben</h2>
+    <p class="hint">Nur für berechtigte Nutzer.</p>
+    <div class="field">
+      <label>Passwort</label>
+      <input type="password" id="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPw()" />
+    </div>
+    <p id="pw-error" style="color:var(--red);font-size:0.82rem;margin-top:-8px;margin-bottom:8px;display:none">Falsches Passwort.</p>
+    <button class="btn-primary" onclick="checkPw()">Weiter →</button>
+  </div>
+</div>
+
 <!-- ── NAME SCREEN (first visit only) ── -->
 <div id="name-screen">
   <div class="logo">TaskBoard</div>
@@ -547,14 +586,44 @@
   let currentFilter = 'all';
   let allTodos = {};
 
+  const PW_HASH = '8a1a25a6b28cba08ab9dfdc6cd226ee3ebf9ce7d01f2562f13e7a4c9e1ba5f04'; // Golf2026
+
+  async function sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
   function getName() { return localStorage.getItem('tb_name') || 'User'; }
 
   // ── Boot ──
-  if (localStorage.getItem('tb_name')) {
-    showApp();
+  if (localStorage.getItem('tb_auth') === '1') {
+    afterAuth();
   } else {
-    document.getElementById('name-screen').style.display = 'flex';
-    setTimeout(() => document.getElementById('name-input').focus(), 100);
+    document.getElementById('pw-screen').style.display = 'flex';
+    setTimeout(() => document.getElementById('pw-input').focus(), 100);
+  }
+
+  window.checkPw = async function() {
+    const val  = document.getElementById('pw-input').value;
+    const hash = await sha256(val);
+    if (hash === PW_HASH) {
+      localStorage.setItem('tb_auth', '1');
+      document.getElementById('pw-screen').style.display = 'none';
+      afterAuth();
+    } else {
+      document.getElementById('pw-error').style.display = 'block';
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-input').focus();
+    }
+  };
+
+  function afterAuth() {
+    if (localStorage.getItem('tb_name')) {
+      showApp();
+    } else {
+      document.getElementById('name-screen').style.display = 'flex';
+      setTimeout(() => document.getElementById('name-input').focus(), 100);
+    }
   }
 
   window.saveName = function() {
