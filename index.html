@@ -383,6 +383,71 @@
 
     @media (max-width: 600px) { .todo-delete { opacity: 0.4; } }
 
+    /* ── PERSON FILTERS ── */
+    .person-filters {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .person-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 14px 6px 8px;
+      border-radius: 99px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .person-btn:hover { border-color: var(--accent); }
+
+    .person-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .person-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .person-btn.active .person-avatar {
+      background: rgba(255,255,255,0.25);
+    }
+
+    .person-count {
+      background: var(--surface2);
+      border-radius: 99px;
+      padding: 1px 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .person-btn.active .person-count {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+    }
+
     /* ── EMPTY STATE ── */
     .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
     .empty-state .emoji { font-size: 2.5rem; margin-bottom: 12px; }
@@ -541,12 +606,14 @@
     <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
   </div>
 
-  <div class="filters">
+  <div class="filters" id="filters-status">
     <button class="filter-btn active" onclick="setFilter('all',this)">Alle</button>
     <button class="filter-btn" onclick="setFilter('open',this)">Offen</button>
     <button class="filter-btn" onclick="setFilter('done',this)">Erledigt</button>
     <button class="filter-btn" onclick="setFilter('high',this)">🔴 Hoch</button>
   </div>
+
+  <div class="person-filters" id="person-filters"></div>
 
   <div id="todo-list" class="todo-list"></div>
 </div>
@@ -586,6 +653,7 @@
   const todosRef = ref(db, 'todos');
 
   let currentFilter = 'all';
+  let currentPerson = null;
   let allTodos = {};
 
   async function sha256(str) {
@@ -689,6 +757,11 @@
     renderTodos();
   };
 
+  window.setPerson = function(person) {
+    currentPerson = currentPerson === person ? null : person;
+    renderTodos();
+  };
+
   function renderTodos() {
     const list = document.getElementById('todo-list');
     const entries = Object.entries(allTodos).sort((a, b) => {
@@ -696,7 +769,29 @@
       return (b[1].createdAt || 0) - (a[1].createdAt || 0);
     });
 
+    // ── Build person filter buttons ──
+    const personCounts = {};
+    entries.forEach(([, t]) => {
+      if (t.assignee) personCounts[t.assignee] = (personCounts[t.assignee] || 0) + 1;
+    });
+    const pContainer = document.getElementById('person-filters');
+    if (Object.keys(personCounts).length > 0) {
+      pContainer.innerHTML = Object.entries(personCounts).map(([name, count]) => {
+        const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+        const active = currentPerson === name ? ' active' : '';
+        return `<button class="person-btn${active}" onclick="setPerson('${esc(name)}')">
+          <span class="person-avatar">${initials}</span>
+          ${esc(name)}
+          <span class="person-count">${count}</span>
+        </button>`;
+      }).join('');
+    } else {
+      pContainer.innerHTML = '';
+    }
+
+    // ── Apply filters ──
     const filtered = entries.filter(([, t]) => {
+      if (currentPerson && t.assignee !== currentPerson) return false;
       if (currentFilter === 'open') return !t.done;
       if (currentFilter === 'done') return t.done;
       if (currentFilter === 'high') return t.priority === 'high';
